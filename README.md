@@ -1,5 +1,5 @@
-**En🇬🇧**
 # nova-assistant
+**En🇬🇧**
 My voice assistant inspired old google assistant, just for Linux and Windows
 
 Currently in global architecture rebuild stage so, it don't work few days
@@ -12,7 +12,6 @@ Currently in global architecture rebuild stage so, it don't work few days
 
 **Ru🇷🇺**
 
-# nova-assistant
 Мой голосовой помощник воодушевленный старым ассистентом от google, только работающий на Windows и Linux
 
 Сейчас на стадии глобальной перестройки архитектуры, так что некоторое время уйдет на возобновление всех функций
@@ -25,7 +24,6 @@ Currently in global architecture rebuild stage so, it don't work few days
 
 **Ua🇺🇦**
 
-# nova-assistant 
 Мій голосовий помічник, натхненний старим асистентом google, тільки працюючий під Linux і Windows
 
 Зараз на етапі глобальної перебудови архітектури, так що на відновлення всіх функцій треба час.
