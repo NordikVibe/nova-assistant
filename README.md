@@ -1,35 +1,72 @@
-# nova-assistant
-**En🇬🇧**
-My voice assistant inspired old google assistant, just for Linux and Windows
+# Nova Assistant
 
-Currently in global architecture rebuild stage so, it don't work few days
+Voice assistant project inspired by the classic Google Assistant experience.
 
-## Todo:
-- [ ] *Flexible plugin system for usermade commands*
-- [ ] *Multiplatform support*
-- [ ] *Most useful commands from case(in my opinion)*
-- [ ] *Overlay like google assistant*
+> Status: the project is currently undergoing a major architecture rebuild, so some functionality may be unstable or temporarily unavailable.
 
-**Ru🇷🇺**
+---
 
-Мой голосовой помощник воодушевленный старым ассистентом от google, только работающий на Windows и Linux
+## 🇬🇧 English
 
-Сейчас на стадии глобальной перестройки архитектуры, так что некоторое время уйдет на возобновление всех функций
+Nova Assistant is a voice assistant for **Linux** and **Windows**.
 
-## Todo:
-- [ ] *Гибкая система пользовательских плагинов*
-- [ ] *Мультиплатформенная поддержка*
-- [ ] *Самые частые и полезные команды(По моему мнению) из коробки*
-- [ ] *Оверлей ассистента в стиле google assistant*
+### Planned improvements
+- [ ] Flexible plugin system for user-made commands
+- [ ] Better cross-platform support
+- [ ] Useful built-in commands out of the box
+- [ ] Assistant overlay similar to Google Assistant
 
-**Ua🇺🇦**
+---
 
-Мій голосовий помічник, натхненний старим асистентом google, тільки працюючий під Linux і Windows
+## 🇷🇺 Русский
 
-Зараз на етапі глобальної перебудови архітектури, так що на відновлення всіх функцій треба час.
+Nova Assistant — это голосовой помощник для **Linux** и **Windows**, вдохновлённый классическим Google Assistant.
 
-## Todo:
-- [ ] *Гнучка система користувацьких плагінів*
-- [ ] *Багатоплатформенна підтримка*
-- [ ] *Найчастіші та найкорисніші команди(на мою думку) з коробки*
-- [ ] *Оверлей в стилі google assistant*
+### Текущий статус
+Проект находится на этапе глобальной перестройки архитектуры, поэтому часть функций может быть временно недоступна.
+
+### Планы
+- [ ] Гибкая система пользовательских плагинов
+- [ ] Улучшенная мультиплатформенная поддержка
+- [ ] Полезные встроенные команды «из коробки»
+- [ ] Оверлей в стиле Google Assistant
+
+---
+
+## 🇺🇦 Українська
+
+Nova Assistant — це голосовий помічник для **Linux** і **Windows**, натхненний класичним Google Assistant.
+
+### Поточний статус
+Проєкт перебуває на етапі глобальної перебудови архітектури, тому частина функцій може бути тимчасово недоступна.
+
+### Плани
+- [ ] Гнучка система користувацьких плагінів
+- [ ] Покращена багатоплатформна підтримка
+- [ ] Корисні вбудовані команди «з коробки»
+- [ ] Оверлей у стилі Google Assistant
+
+---
+
+## Quick start
+
+```bash
+pip install -r requirements.txt
+python main.py
+```
+
+Available run arguments:
+
+- `--mlmodel` — path to intent model file
+- `--sttmodel` — path to STT model directory
+- `--ttsmodel` — path to TTS model directory
+
+---
+
+## Plugin system
+
+Plugin development guides are available in:
+
+- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/dev.md` (English)
+- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/devRU.md` (Русский)
+- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/devUA.md` (Українська)
