@@ -1,46 +1,99 @@
-# Розробка плагінів
-Якщо ти хочеш зробити власні команди для асистента — це для тебе.
-Використай "*python create_plugin.py*", щоб створити шаблон плагіна з указаною назвою та твоїми даними: опис, версія й ім'я автора.
+# Розробка плагінів (Українська)
 
-Після запуску скрипта ти отримаєш чистий шаблон плагіна:
+Плагіни завантажуються з `/home/runner/work/nova-assistant/nova-assistant/PluginSystem`.
 
-**plugin.yaml**
+## Структура папки плагіна
+
+Кожен плагін має бути окремою директорією з файлами:
+
+- `plugin.py`
+- `plugin.yaml`
+
+Ігноруються:
+
+- директорії/файли, що починаються з `!`
+- директорії/файли, що починаються з `__`
+- директорія `Cache`
+- усе, що не є директорією плагіна
+
+## Контракт `plugin.py`
+
+Використовуй `BasePlugin` із `PluginSystem/PluginSystem.py`.
+
+```python
+from PluginSystem.PluginSystem import BasePlugin
+
+class Plugin(BasePlugin):
+    def __init__(self, Context, plugin):
+        super().__init__(Context, plugin)
+
+    def my_handler(self, slots):
+        return {"value": "ok"}
+```
+
+Важливо:
+
+- Ім'я класу: `Plugin`.
+- Назви методів-обробників мають збігатися з `handler` у YAML.
+- Обробник приймає `slots` (list).
+- Доступні інструменти через `self.Context`, наприклад:
+  - `self.Context.Libs.logger`
+  - `self.Context.Libs.subprocess`
+  - черги, конфіг і дані користувача.
+
+## Контракт `plugin.yaml`
+
+Базова структура:
+
 ```yaml
-plugin-meta:
-    name: 'Your plugin name'
-    description: 'your desc'
-    version: 'your v'
-    author: 'your name or anon'
-    enabled: true
+plugin-metadata:
+  name: Example
+  version: 1
+  description: Example plugin
+  author: YourName
+  enabled: true
 
 plugin-data:
-    intents:
-        your-intent:
-            intent: 'intent name'
-            handler: 'name of method handler from plugin.py'
-            examples: []
-            hasSlot: false
-            responsesNoSlot: []
-            responsesWithSlot: []
+  intents:
+    example.intent:
+      intent: example.intent
+      handler: my_handler
+      examples:
+        - "Приклад фрази"
+      hasSlotInput: false
+      hasSlotOutput: false
+      responsesNoSlot:
+        - "Готово"
+      responsesWithSlot:
+        - "Готово: {value}"
 ```
-*enabled: true* — якщо не true, плагін буде пропущено під час завантаження.
-*intent:* — назва твого інтенту; я використовую назви у верхньому регістрі, але можна будь-які, це просто рядок.
-*handler:* — це назва методу плагіна, який виконується при отриманні інтенту. Якщо handler не посилається на жоден метод, у лог записується помилка, і інтент пропускається.
-*examples: []* — список фраз, на які асистент реагує цим інтентом.
-*hasSlot: false* — якщо у твоїй команді є слот, можна встановити true (зараз може витягувати лише російські назви чисел; пізніше планую додати можливість використовувати regex-юніт для ручного витягування слота).
-*responseNoSlot: []* — ці фрази асистент озвучує на етапі preprocessing і випадково відтворює після виконання handler (коли я додам опціональний llm-модуль у config, цей список буде використовуватися, якщо модуль вимкнений).
-*responsesWithSlot: []* — ці фрази асистент озвучує в реальному часі. Пиши їх у форматі "text{slot}text".
-slot — це значення, які повертає твій handler, і вони нічим не обмежені.
 
-**plugin.py**
-```python
-from ..PluginSystem import BasePlugin
+Пояснення полів:
 
-class MediaPlugin(BasePlugin):
-    def __init__(self, Context):
-        super().__init__(plugin_manager, Context)
-    
-    def handler(self, slot):
-        return slot
+- `plugin-metadata.enabled`: зараз плагін все одно завантажується, але для активного плагіна став `true`.
+- `examples`: фрази для навчання моделі інтентів і граматики STT.
+- `hasSlotInput`: якщо `true`, рантайм пробує витягти число з російського тексту.
+- `hasSlotOutput`: вмикає вибір відповіді у слот-режимі.
+- `responsesNoSlot`: звичайні відповіді, також використовуються для попередньої генерації аудіо.
+- `responsesWithSlot`: відповіді для форматування через дані з handler.
+
+## Оновлення моделі та кешу
+
+Після змін у YAML запусти:
+
+```bash
+python preprocessing.py --config config.json
 ```
-Ти можеш використовувати **Context**, щоб отримати все необхідне: він містить усі використовувані бібліотеки та кілька кросплатформних менеджерів, як-от audio, notification, overlay (можливо, пізніше додам ще): self.Context.Libs.logger (я використовую loguru). Як користуватися моїми менеджерами, можна буде знайти пізніше в папці Plugin system.
+
+Оновлюються:
+
+- `models/model.pkl`
+- `hashsum.json`
+- `PluginSystem/Cache/<voice_hash>/...`
+
+## Що відбувається під час роботи
+
+- `main.py` завантажує плагіни та формує STT-граматику з `examples`.
+- `threads.confidenceThread` визначає інтент і викликає handler.
+- Повернуті дані можуть підставлятися у відповідь.
+- Відтворюється кешований або згенерований TTS-аудіофайл.

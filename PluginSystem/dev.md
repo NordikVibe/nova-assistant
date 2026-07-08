@@ -1,51 +1,100 @@
-# Plugin dev
+# Plugin Development (English)
 
-If u want to do your own commands for assistant it gor you
-Use "*python create_plugin.py*"  to create plugin pattern with writen name and your data like description, version and author name
+This project loads plugins from `/home/runner/work/nova-assistant/nova-assistant/PluginSystem`.
 
-After script you get clean plugin template:
+## Plugin folder layout
 
-## plugin.yaml
+Each plugin must be a directory with:
 
-```yaml
-plugin-meta:
-    name: 'Your plugin name'
-    description: 'your desc'
-    version: 'your v'
-    author: 'your name or anon'
-    enabled: true
+- `plugin.py`
+- `plugin.yaml`
 
-plugin-data:
-    intents:
-        your-intent:
-            intent: 'intent name'
-            handler: 'name of method handler from plugin.py'
-            examples: []
-            hasSlot: false
-            responsesNoSlot: []
-            responsesWithSlot: []
-```
+Folders/files are ignored when they:
 
-*enabled: true* - if it not true plugin skips on load
-*intent:* - name of your intent, i using upper case names, but you can use any, it just string
-*handler:* - it's name of plugin's method, who exec on receiving intent. If handler does not refer to any method, it writes error to log and skip.
-*examples: []* - list of phrases to which the assistant responds this intent
-*hasSlot: false* - if your command has slot, you can set, to true(already it can extract only Russian number names, once later im want do possibility to use regex unit, for manually extract slot)
-*responseNoSlot: []* - this phrases assistant voices on preprocessing stage and plays random after running handler(once i add optional llm module to config, and this list uses when this module disabled)
-*responsesWithSlot: []* - this phrases assistant voices in real time. You must write this responses like "text{slot}text"
-slot its returned values by your handler, and hasn't limits
+- start with `!`
+- start with `__`
+- are `Cache`
+- are not directories
 
-## plugin.py
+## `plugin.py` contract
+
+Use `BasePlugin` from `PluginSystem/PluginSystem.py`.
 
 ```python
-from ..PluginSystem import BasePlugin
+from PluginSystem.PluginSystem import BasePlugin
 
-class MediaPlugin(BasePlugin):
-    def __init__(self, Context):
-        super().__init__(plugin_manager, Context)
-    
-    def handler(self, slot):
-        return slot
+class Plugin(BasePlugin):
+    def __init__(self, Context, plugin):
+        super().__init__(Context, plugin)
+
+    def my_handler(self, slots):
+        # your logic
+        return {"value": "ok"}
 ```
 
-You can use **Context** to get all what you need, it contains all used library and some cross platform manager like audio, notification, overlay(may be add some later): self.Context.Libs.logger (i use loguru). How use my managers you can find in Plugin system folder later.
+Notes:
+
+- Class name must be `Plugin`.
+- Handler names must match YAML `handler` values.
+- Handler signature should accept `slots` (list).
+- You can use:
+  - `self.Context.Libs.logger`
+  - `self.Context.Libs.subprocess`
+  - queues/config from `self.Context`.
+
+## `plugin.yaml` contract
+
+Minimal structure used by loader/runtime:
+
+```yaml
+plugin-metadata:
+  name: Example
+  version: 1
+  description: Example plugin
+  author: YourName
+  enabled: true
+
+plugin-data:
+  intents:
+    example.intent:
+      intent: example.intent
+      handler: my_handler
+      examples:
+        - "Example phrase"
+      hasSlotInput: false
+      hasSlotOutput: false
+      responsesNoSlot:
+        - "Done"
+      responsesWithSlot:
+        - "Done: {value}"
+```
+
+Important fields:
+
+- `plugin-metadata.enabled`: currently loaded even when false; keep true for active plugins.
+- `examples`: training phrases for intent model and STT grammar.
+- `hasSlotInput`: if true, runtime tries to parse a number from Russian text.
+- `hasSlotOutput`: enables slot-style response selection in runtime.
+- `responsesNoSlot`: responses used for normal output and preprocessing cache generation.
+- `responsesWithSlot`: responses intended for formatted output.
+
+## Training and cache refresh
+
+After changing plugin YAML, run preprocessing:
+
+```bash
+python preprocessing.py --config config.json
+```
+
+This updates:
+
+- `models/model.pkl` (intent classifier)
+- `hashsum.json` (YAML integrity map checked by `main.py`)
+- `PluginSystem/Cache/<voice_hash>/...` (pre-generated TTS responses)
+
+## Runtime flow
+
+- `main.py` builds plugin manager and grammar from plugin examples.
+- `threads.confidenceThread` predicts intent and calls plugin handler.
+- Returned data can be used for response formatting.
+- Audio is played from cache or generated in TTS thread (if enabled).
