@@ -1,0 +1,90 @@
+plugin-metadata:
+  name: MEDIA
+  version: 1.0.0
+  description: A plugin for handling media tasks.
+  author: NordikVibe
+  enabled: true
+
+plugin-data:
+  intents:
+    media.pause:
+      intent: media.pause
+      handler: pause
+      examples:
+        - "Останови видео"
+        - "Поставь видео на паузу"
+        - "Поставь на паузу"
+        - "Пауза"
+        - "Приостанови"
+        - "Приостанови видео"
+        - "Приостанови музыку"
+        - "Приостанови аудио"
+        - "Приостанови медиа"
+        - "Останови музыку"
+        - "Останови аудио"
+        - "Останови медиа"
+      responsesNoSlot:
+        - "Медиа приостановлено."
+        - "Пауза включена."
+        - "Медиа остановлено."
+        - "Приостановка выполнена."
+        - "Медиа поставлено на паузу."
+      responsesWithSlot: []
+      hasSlotInput: false
+      hasSlotOutput: false
+    media.resume:
+      intent: media.resume
+      handler: resume
+      examples:
+        - "Продолжи видео"
+        - "Продолжи воспроизведение"
+        - "Возобнови видео"
+        - "Возобнови воспроизведение"
+        - "Воспроизведение"
+        - "Продолжи музыку"
+        - "Продолжи аудио"
+        - "Возобнови музыку"
+        - "Возобнови аудио"
+      responsesNoSlot:
+        - "Медиа продолжено."
+        - "Воспроизведение возобновлено."
+        - "Медиа возобновлено."
+      responsesWithSlot: []
+      hasSlotInput: false
+      hasSlotOutput: false
+    media.next:
+      intent: media.next
+      handler: next
+      examples:
+        - "Следующий трек"
+        - "Следующая песня"
+        - "Следующая композиция"
+        - "Следующий"
+        - "Следующая"
+      responsesNoSlot:
+        - "Переключение на следующий трек."
+        - "Следующий трек воспроизводится."
+        - "Переключаю"
+      responsesWithSlot: []
+      hasSlotInput: false
+      hasSlotOutput: false
+    media.previous:
+      intent: media.previous
+      handler: previous
+      examples:
+        - "Предыдущий трек"
+        - "Предыдущая песня"
+        - "Предыдущая композиция"
+        - "Предыдущий"
+        - "Предыдущая"
+        - "Назад"
+        - "Прошлый"
+        - "Прошлая"
+        - "Прошлый трек"
+      responsesNoSlot:
+        - "Переключение на предыдущий трек."
+        - "Предыдущий трек воспроизводится."
+        - "Переключаю"
+      responsesWithSlot: []
+      hasSlotInput: false
+      hasSlotOutput: false

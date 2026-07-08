@@ -1,0 +1,30 @@
+plugin-data:
+    intents:
+        open.telegram:
+            examples:
+            - "Открой телеграм"
+            - "Открой телеграмм"
+            - "Открой телегу"
+            - "Открой аюграмм"
+            - "Открой аюграм"
+            - "Запусти аюграмм"
+            - "Запусти аюграм"
+            - "Запусти телеграм"
+            - "Запусти телеграмм"
+            - "Открой тг"
+            - "Запусти тг"
+            - "Открой аю"
+            - "Запусти аю"
+            handler: open_telegram_handler
+            hasSlot: false
+            intent: open.telegram
+            responsesNoSlot:
+            - Запускаю телеграм
+            - Уже открываю
+            responsesWithSlot: []
+plugin-metadata:
+    author: NordikVibe
+    description: Plugin for work with external applications
+    enabled: true
+    name: Apps
+    version: 1

@@ -1,10 +1,12 @@
 # Plugin dev
+
 If u want to do your own commands for assistant it gor you
 Use "*python create_plugin.py*"  to create plugin pattern with writen name and your data like description, version and author name
 
 After script you get clean plugin template:
 
-**plugin.yaml**
+## plugin.yaml
+
 ```yaml
 plugin-meta:
     name: 'Your plugin name'
@@ -23,6 +25,7 @@ plugin-data:
             responsesNoSlot: []
             responsesWithSlot: []
 ```
+
 *enabled: true* - if it not true plugin skips on load
 *intent:* - name of your intent, i using upper case names, but you can use any, it just string
 *handler:* - it's name of plugin's method, who exec on receiving intent. If handler does not refer to any method, it writes error to log and skip.
@@ -32,7 +35,8 @@ plugin-data:
 *responsesWithSlot: []* - this phrases assistant voices in real time. You must write this responses like "text{slot}text"
 slot its returned values by your handler, and hasn't limits
 
-**plugin.py**
+## plugin.py
+
 ```python
 from ..PluginSystem import BasePlugin
 
@@ -43,4 +47,5 @@ class MediaPlugin(BasePlugin):
     def handler(self, slot):
         return slot
 ```
+
 You can use **Context** to get all what you need, it contains all used library and some cross platform manager like audio, notification, overlay(may be add some later): self.Context.Libs.logger (i use loguru). How use my managers you can find in Plugin system folder later.

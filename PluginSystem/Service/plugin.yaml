@@ -1,0 +1,24 @@
+plugin-data:
+    intents:
+        ACTIVATE:
+            examples:
+                - "Нова"
+                - "Нова, включись"
+                - "Нова, активируйся"
+                - "Нова, команда"
+                - "Асистент"
+            handler: activate_handler
+            hasSlotInput: false
+            hasSlotOutput: true
+            intent: ACTIVATE
+            responsesNoSlot:
+                - "Слу`шаю"
+                - "Слу`шаю тебя`"
+            responsesWithSlot: 
+                - "Слу`шаю тебя' {value}"
+plugin-metadata:
+    author: NordikVibe
+    description: Service plugin for AI assistant
+    enabled: true
+    name: Service
+    version: 1

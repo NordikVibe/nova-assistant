@@ -1,0 +1,27 @@
+{
+    "TTS": {
+        "Voice": "audio_2026-06-29_23-04-48.ogg",
+        "Emotion": "neutral",
+        "Model": "tts_models/multilingual/multi-dataset/xtts_v2",
+        "enabled": false
+    },
+    "STT": {
+        "Model": "models/vosk-model-ru-0.42"
+    },
+    "IntentModel": {
+        "Path": "models/model.pkl"
+    },
+    "Audio": {
+        "InputDevice": "Microphone (Realtek(R) Audio)",
+        "OutputDevice": "Speakers (Realtek(R) Audio)"
+    },
+    "Logging": {
+        "FileLogLevel": "TRACE",
+        "FileLogPath": "logs/app.log",
+        "ConsoleLogLevel": "INFO",
+        "ConsoleDebugLogLevel": "TRACE"
+    },
+    "User": {
+        "Name": "User"
+    }
+}

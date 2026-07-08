@@ -1,0 +1,106 @@
+plugin-data:
+    intents:
+        volume.up:
+            examples:
+            - "Сделай громче на 5%"
+            - "Сделай громче на 2 процентов"
+            - "Громче на 15 процентов"
+            - "Громче на 20%"
+            - "Сделай 25% громче"
+            - "На 30% процентов громче"
+            - "На 35% громче"
+            handler: volumeUp_handler
+            hasSlotInput: true
+            hasSlotOutput: true
+            intent: volume.up
+            responsesNoSlot:
+                - "Громкость увеличена"
+                - "Увеличиваю"
+                - "Делаю громче"
+            responsesWithSlot: 
+                - "Громкость увеличена на {value}%"
+        volume.down:
+            examples:
+            - "Сделай тише на 5%"
+            - "Сделай тише на 2 процентов"
+            - "Тише на 15 процентов"
+            - "Тише на 20%"
+            - "Сделай 25% тише"
+            - "На 30% процентов тише"
+            - "На 35% тише"
+            handler: volumeDown_handler
+            hasSlotInput: true
+            hasSlotOutput: true
+            intent: volume.down
+            responsesNoSlot:
+                - "Громкость уменьшена"
+                - "Уменьшаю"
+                - "Делаю тише"
+            responsesWithSlot: 
+                - "Громкость уменьшена на {value}%"
+                - "Уменьшаю на {value}%"
+        volume.set:
+            examples:
+                - "Сделай звук на 100%"
+                - "Звук на 33%"
+                - "Установи громкость на 50%"
+                - "Установи звук на 75%"
+                - "Сделай громкость на 25%"
+                - "Сделай звук на 60 процентов"
+                - "Звук на 40 процентов"
+                - "Установи громкость на 80 процентов"
+                - "Установи звук на 90 процентов"
+                - "Сделай громкость на 10 процентов"
+                - "Сделай звук на 71%"
+                - "Звук на 53%"
+                - "Установи громкость на 37%"
+                - "Установи звук на 66%"
+                - "Сделай громкость на 41%"
+            handler: volumeSet_handler
+            hasSlotInput: true
+            hasSlotOutput: true
+            intent: volume.set
+            responsesNoSlot:
+                - "Громкость установлена"
+                - "Устанавливаю"
+                - "Установила"
+            responsesWithSlot: 
+                - "Громкость установлена на {value}%"
+        volume.mute:
+            examples:
+                - "Выключи звук"
+                - "Выключи громкость"
+                - "Отключи звук"
+                - "Отключи громкость"
+                - "Сделай без звука"
+                - "Сделай без громкости"
+            handler: volumeMute_handler
+            hasSlotInput: false
+            hasSlotOutput: false
+            intent: volume.mute
+            responsesNoSlot:
+                - "Звук выключен"
+                - "Громкость отключена"
+                - "Выключаю звук"
+        volume.unmute:
+            examples:
+                - "Включи звук"
+                - "Включи громкость"
+                - "Включи звук обратно"
+                - "Включи громкость обратно"
+                - "Сделай со звуком"
+                - "Сделай с громкостью"
+            handler: volumeUnmute_handler
+            hasSlotInput: false
+            hasSlotOutput: false
+            intent: volume.unmute
+            responsesNoSlot:
+                - "Звук включен"
+                - "Громкость включена"
+                - "Включаю звук"
+
+plugin-metadata:
+    author: Your Name
+    description: Description for Volume
+    enabled: true
+    name: Volume
