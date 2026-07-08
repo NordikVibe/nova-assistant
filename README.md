@@ -77,4 +77,4 @@ Plugin development guides:
 
 - `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/dev.md` (English)
 - `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/devUA.md` (Українська)
-- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/dev.RU.md` (Русский)
+- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/devRU.md` (Русский)
