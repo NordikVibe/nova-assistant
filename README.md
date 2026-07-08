@@ -14,23 +14,23 @@ Core pipeline:
 
 Main modules:
 
-- `/home/runner/work/nova-assistant/nova-assistant/main.py` — runtime entrypoint (audio capture + STT loop)
-- `/home/runner/work/nova-assistant/nova-assistant/preprocessing.py` — intent model training, plugin hash generation, TTS cache generation
-- `/home/runner/work/nova-assistant/nova-assistant/Managers.py` — config/context, plugin loading, intent registry, training manager
-- `/home/runner/work/nova-assistant/nova-assistant/threads.py` — intent confidence, audio playback, runtime TTS threads
+- [main.py](https://github.com/NordikVibe/nova-assistant/blob/main/main.py) — runtime entrypoint (audio capture + STT loop)
+- [preprocessing.py](https://github.com/NordikVibe/nova-assistant/blob/main/preprocessing.py) — intent model training, plugin hash generation, TTS cache generation
+- [Managers.py](https://github.com/NordikVibe/nova-assistant/blob/main/Managers.py) — container for all classes
+- [threads.py](https://github.com/NordikVibe/nova-assistant/blob/main/threads.py) — intent confidence, audio playback, runtime TTS threads
 
 Built-in plugins:
 
 - `PluginSystem/Service` — activation intent
 - `PluginSystem/Volume` — volume control via `pactl`
 - `PluginSystem/Media` — media control via `playerctl`
-- `PluginSystem/Apps` — app launching (example: AyuGram)
+- `PluginSystem/Apps` — work with external apps
 
 ## Requirements
 
 - Python 3.10+
 - `pip install -r requirements.txt`
-- System audio tooling used by plugins (for Linux plugins): `pactl`, `playerctl`
+- Temporary requires linux
 
 ## Setup and run
 
@@ -60,7 +60,7 @@ Optional runtime flags:
 
 ## Configuration
 
-Config file: `/home/runner/work/nova-assistant/nova-assistant/config.json`
+Config file: [Config.json](https://github.com/NordikVibe/nova-assistant/blob/main/config.json)
 
 Key sections:
 
@@ -75,6 +75,6 @@ Key sections:
 
 Plugin development guides:
 
-- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/dev.md` (English)
-- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/devUA.md` (Українська)
-- `/home/runner/work/nova-assistant/nova-assistant/PluginSystem/devRU.md` (Русский)
+- [English](https://github.com/NordikVibe/nova-assistant/blob/main/PluginSystem/dev.md)
+- [Українська](https://github.com/NordikVibe/nova-assistant/blob/main/PluginSystem/devUA.md)
+- [Русский](https://github.com/NordikVibe/nova-assistant/blob/main/PluginSystem/devRU.md)
