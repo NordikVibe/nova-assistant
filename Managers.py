@@ -108,14 +108,16 @@ class LoadedPlugin:
             )
     def getRandomAnswer(self, intent: str) -> None | str:
         intent_data = self.plugin_data.get("intents", {}).get(intent, {})
-        answers = [intent_data.get("responsesNoSlot", []), intent_data.get("responsesWithSlot", [])]
-        if not answers:
+        answers_no_slot = intent_data.get("responsesNoSlot", [])
+        answers_with_slot = intent_data.get("responsesWithSlot", [])
+        if not answers_no_slot and not answers_with_slot:
             return None
-        random_index1 = random.randint(0, 1) if intent_data.get("hasSlotOutput", False) and self.Context.TTS["enabled"] else 0
-        while not answers[random_index1]:
-            random_index1 = random.randint(0, len(answers) - 1)
-        random_index2 = random.randint(0, len(answers[random_index1]) - 1)
-        return answers[random_index1][random_index2]
+        tts_enabled = bool(self.Context.TTS.get("enabled", self.Context.TTS.get("Enabled", False)))
+        if intent_data.get("hasSlotOutput", False) and tts_enabled and answers_with_slot:
+            return random.choice(answers_with_slot)
+        if answers_no_slot:
+            return random.choice(answers_no_slot)
+        return random.choice(answers_with_slot)
     
 @dataclass
 class IntentEntry:

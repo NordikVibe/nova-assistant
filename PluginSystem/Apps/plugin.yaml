@@ -16,7 +16,8 @@ plugin-data:
             - "Открой аю"
             - "Запусти аю"
             handler: open_telegram_handler
-            hasSlot: false
+            hasSlotInput: false
+            hasSlotOutput: false
             intent: open.telegram
             responsesNoSlot:
             - Запускаю телеграм

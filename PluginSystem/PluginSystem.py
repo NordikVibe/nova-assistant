@@ -10,14 +10,14 @@ class BasePlugin:
 
     def on_load(self):
         """Called when the plugin is loaded."""
-        self.context.Libs.logger.trace(f"Plugin {self.name} v{self.version} by {self.author} loaded.")
+        self.Context.Libs.logger.trace(f"Plugin {self.name} v{self.version} by {self.author} loaded.")
         pass
     def on_unload(self):
         """Called when the plugin is unloaded."""
-        self.context.Libs.logger.trace(f"Plugin {self.name} v{self.version} by {self.author} unloaded.")
+        self.Context.Libs.logger.trace(f"Plugin {self.name} v{self.version} by {self.author} unloaded.")
         pass
     def on_call(self, *args, **kwargs):
         """Called when the plugin is invoked."""
-        self.context.Libs.logger.trace(f"Plugin {self.name} v{self.version} by {self.author} called.")
+        self.Context.Libs.logger.trace(f"Plugin {self.name} v{self.version} by {self.author} called.")
         pass
         

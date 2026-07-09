@@ -1,5 +1,3 @@
-from sys import exception
-
 from Managers import ContextManager
 import joblib
 from number_parser import parse
@@ -73,18 +71,21 @@ def confidenceThread(Context: ContextManager):
                 handler_output = None
             
             ans = Context.plugin_manager.intent_registry[intent].plugin.getRandomAnswer(intent)
-            if re.match(r"{slot}", ans) and Context.plugin_manager.intent_registry.get(intent).plugin.plugin_data.get("intents", "").get(intent, "").get("hasSlotOutput", False):
+            if not ans:
+                logger.warning(f"No response configured for intent '{intent}'.")
+                continue
+            if ans and "{value}" in ans and Context.plugin_manager.intent_registry.get(intent).plugin.plugin_data.get("intents", "").get(intent, "").get("hasSlotOutput", False):
                 ans = ans.format(**handler_output) if handler_output else ans
             logger.trace(f"💬 RESPONSE: {ans}")
             path = f"PluginSystem/Cache/{voice_hash}/{hashlib.sha256(ans.encode('utf-8')).hexdigest()}.mp3"
             if os.path.exists(path):
                 Context.AudioQueue.put(path)
             else:
-                if Context.TTS.get("Enabled"):
+                if Context.TTS.get("enabled", Context.TTS.get("Enabled", False)):
                     Context.TTSQueue.put(ans)
                 else:
                     logger.warning("TTS is disabled. Cannot generate audio response.")
-        except exception:
+        except Exception:
             logger.exception("Confidence Crushed")
                 
 # ======================
@@ -166,6 +167,6 @@ def hypervisorThread(Context: ContextManager):
     ConfidenceThread.start()
     AudioThread = threading.Thread(target=audioThread, args=(Context,), daemon=True)
     AudioThread.start()
-    if Context.TTS.get("Enabled"):
+    if Context.TTS.get("enabled", Context.TTS.get("Enabled", False)):
         TTSthread = threading.Thread(target=TTSThread, args=(Context,), daemon=True)
         TTSthread.start()
