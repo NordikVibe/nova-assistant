@@ -24,6 +24,7 @@ DEFAULT_CONFIG = {
         "Voice": "Luis Moray",
         "Emotion": "neutral",
         "Model": "tts_models/multilingual/multi-dataset/xtts_v2",
+        "enabled": False,
     },
     "STT": {
         "Model": "models/vosk-model-ru-0.42",
@@ -112,7 +113,7 @@ class LoadedPlugin:
         answers_with_slot = intent_data.get("responsesWithSlot", [])
         if not answers_no_slot and not answers_with_slot:
             return None
-        tts_enabled = bool(self.Context.TTS.get("enabled", self.Context.TTS.get("Enabled", False)))
+        tts_enabled = bool(self.Context.TTS.get("enabled", False))
         if intent_data.get("hasSlotOutput", False) and tts_enabled and answers_with_slot:
             return random.choice(answers_with_slot)
         if answers_no_slot:

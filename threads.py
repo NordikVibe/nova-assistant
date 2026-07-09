@@ -81,7 +81,7 @@ def confidenceThread(Context: ContextManager):
             if os.path.exists(path):
                 Context.AudioQueue.put(path)
             else:
-                if Context.TTS.get("enabled", Context.TTS.get("Enabled", False)):
+                if Context.TTS.get("enabled", False):
                     Context.TTSQueue.put(ans)
                 else:
                     logger.warning("TTS is disabled. Cannot generate audio response.")
@@ -167,6 +167,6 @@ def hypervisorThread(Context: ContextManager):
     ConfidenceThread.start()
     AudioThread = threading.Thread(target=audioThread, args=(Context,), daemon=True)
     AudioThread.start()
-    if Context.TTS.get("enabled", Context.TTS.get("Enabled", False)):
+    if Context.TTS.get("enabled", False):
         TTSthread = threading.Thread(target=TTSThread, args=(Context,), daemon=True)
         TTSthread.start()

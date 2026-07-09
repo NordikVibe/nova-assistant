@@ -108,7 +108,7 @@ def callback(indata, frames, time, status):
 #     context_manager.stopEvent.set()
 #     ConfidenceThread.join()
 #     AudioThread.join()
-#     if context_manager.TTS.get("Enabled"):
+#     if context_manager.TTS.get("enabled"):
 #         TTSThread.join()
 #     context_manager.Libs.logger.info("Successfully terminated.")
 #     exit(0)
