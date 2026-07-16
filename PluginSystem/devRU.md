@@ -76,10 +76,10 @@ plugin-data:
 
 ## Обновление модели и кэша
 
-После изменения YAML запусти:
+После изменения YAML запусти принудительный препроцессинг через `main.py`:
 
 ```bash
-python preprocessing.py --config config.json
+python main.py --config config.json --preprocess
 ```
 
 Это обновляет:
@@ -87,6 +87,8 @@ python preprocessing.py --config config.json
 - `models/model.pkl`
 - `hashsum.json`
 - `PluginSystem/Cache/<voice_hash>/...`
+
+`main.py` также автоматически запускает препроцессинг, если хэши отсутствуют или устарели.
 
 ## Что происходит во время работы
 
