@@ -38,9 +38,9 @@ Notes:
 - Handler names must match YAML `handler` values.
 - Handler signature should accept `slots` (list).
 - You can use:
-  - `self.Context.Libs.logger`
-  - `self.Context.Libs.subprocess`
-  - queues/config from `self.Context`.
+  - `self.contextManager.context.libraries.logger`
+  - `self.contextManager.context.libraries.subprocess`
+  - queues/config from `self.contextManager.context`.
 
 ## `plugin.yaml` contract
 
@@ -80,10 +80,10 @@ Important fields:
 
 ## Training and cache refresh
 
-After changing plugin YAML, run preprocessing:
+After changing plugin YAML, trigger preprocessing from `main.py`:
 
 ```bash
-python preprocessing.py --config config.json
+python main.py --preprocess
 ```
 
 This updates:
@@ -91,6 +91,8 @@ This updates:
 - `models/model.pkl` (intent classifier)
 - `hashsum.json` (YAML integrity map checked by `main.py`)
 - `PluginSystem/Cache/<voice_hash>/...` (pre-generated TTS responses)
+
+`main.py` also starts preprocessing automatically when hashes are missing or outdated.
 
 ## Runtime flow
 
