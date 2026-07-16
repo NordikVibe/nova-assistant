@@ -38,9 +38,9 @@ Notes:
 - Handler names must match YAML `handler` values.
 - Handler signature should accept `slots` (list).
 - You can use:
-  - `self.Context.Libs.logger`
-  - `self.Context.Libs.subprocess`
-  - queues/config from `self.Context`.
+  - `self.contextManager.context.libraries.logger`
+  - `self.contextManager.context.libraries.subprocess`
+  - queues/config from `self.contextManager.context`.
 
 ## `plugin.yaml` contract
 
@@ -83,7 +83,7 @@ Important fields:
 After changing plugin YAML, trigger preprocessing from `main.py`:
 
 ```bash
-python main.py --config config.json --preprocess
+python main.py --preprocess
 ```
 
 This updates:
