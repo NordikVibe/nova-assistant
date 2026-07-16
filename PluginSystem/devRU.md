@@ -36,7 +36,7 @@ class Plugin(BasePlugin):
 - Имя класса: `Plugin`.
 - Имя метода-обработчика должно совпадать с `handler` в YAML.
 - Обработчик принимает `slots` (list).
-- Через `self.Context` доступны логгер, subprocess, очереди и конфиг.
+- Через `self.contextManager` доступны логгер, subprocess, очереди и конфиг.
 
 ## Контракт `plugin.yaml`
 
