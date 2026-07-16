@@ -29,7 +29,7 @@ Built-in plugins:
 
 ## Requirements
 
-- Python 3.10+
+- Python 3.10
 - `pip install -r requirements.txt`
 - Linux or Windows
 
@@ -44,7 +44,7 @@ pip install -r requirements.txt
 2. (Optional) Force preprocessing (model/hash/cache regeneration):
 
 ```bash
-python main.py --config config.json --preprocess
+python main.py --preprocess
 ```
 
 `main.py` also auto-runs preprocessing when `hashsum.json` is missing or plugin YAML hashes changed.
@@ -52,7 +52,7 @@ python main.py --config config.json --preprocess
 3. Run assistant:
 
 ```bash
-python main.py --config config.json
+python main.py
 ```
 
 Optional runtime flags:
