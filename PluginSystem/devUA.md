@@ -37,8 +37,8 @@ class Plugin(BasePlugin):
 - Назви методів-обробників мають збігатися з `handler` у YAML.
 - Обробник приймає `slots` (list).
 - Доступні інструменти через `self.Context`, наприклад:
-  - `self.Context.Libs.logger`
-  - `self.Context.Libs.subprocess`
+  - `self.contextManager.context.libraries.logger`
+  - `self.contextManager.context.libraries.subprocess`
   - черги, конфіг і дані користувача.
 
 ## Контракт `plugin.yaml`
@@ -82,7 +82,7 @@ plugin-data:
 Після змін у YAML запусти примусовий препроцесинг через `main.py`:
 
 ```bash
-python main.py --config config.json --preprocess
+python main.py --preprocess
 ```
 
 Оновлюються:
