@@ -1,6 +1,6 @@
-from sys import exception
-
 from Managers import ContextManager
+from functools import partial
+from scipy.signal import resample_poly
 import joblib
 from number_parser import parse
 import re
@@ -13,22 +13,26 @@ from pathlib import Path
 import numpy as np
 import librosa
 import threading
+import json
+from vosk import Model, KaldiRecognizer
+from telegram import TelegramThread
 
 TARGET_SR = 48000
+INPUT_SR = 44100
 # ======================
 # Confidence Thread
 # ======================
-def confidenceThread(Context: ContextManager):
-    assitantActive = False
-    intent_model = joblib.load(Context.Intent["Path"])
-    ConfidenceQueue = Context.ConfidenceQueue
-    stopEvent = Context.stopEvent
-    logger = Context.Libs.logger
+def confidenceThread(contextManager: ContextManager):
+    logger = contextManager.context.libraries.logger
     logger.trace("ConfidenceThread started.")
-    voice_hash = hashlib.sha256(Context.TTS['Voice'].encode('utf-8')).hexdigest()
+    assitantActive = False
+    intent_model = joblib.load(contextManager.context.config.IntentModel.modelPath)
+    stopEvent = contextManager.context.stopEvent
+    plugin_manager = contextManager.context.plugin_manager
+    voice_hash = hashlib.sha256(contextManager.config.TTS.Voice.encode('utf-8')).hexdigest()
     while not stopEvent.is_set():
         try:
-            text = ConfidenceQueue.get()
+            text = contextManager.context.ConfidenceQueue.get()
             slots = []
             if text is None:
                 continue
@@ -51,12 +55,12 @@ def confidenceThread(Context: ContextManager):
             if intent == "UNKNOWN":
                 continue
             
-            if Context.plugin_manager.intent_registry.get(intent).plugin.plugin_data.get("intents", "").get(intent, "").get("hasSlotInput", False):
-                Context.Libs.logger.info(f"{intent} requires slot input. Parsing numbers from text: {text}.")
+            if plugin_manager.intent_registry.get(intent).plugin.plugin_data.get("intents", "").get(intent, "").get("hasSlotInput", False):
+                logger.info(f"{intent} requires slot input. Parsing numbers from text: {text}.")
                 text_with_numbers = parse(text, language="ru")
-                Context.Libs.logger.info(f"Parsed text with numbers: {text_with_numbers}.")
+                logger.info(f"Parsed text with numbers: {text_with_numbers}.")
                 slots.append(re.search(r"(\d+)", text_with_numbers).group(1) if re.search(r"(\d+)", text_with_numbers) else None)
-            handler = Context.plugin_manager.intent_registry[intent].handler
+            handler = plugin_manager.intent_registry[intent].handler
             if not handler:
                 logger.warning(f"No handler found for intent '{intent}'.")
 
@@ -72,19 +76,19 @@ def confidenceThread(Context: ContextManager):
                 logger.info(f"Handler for intent '{intent}' not executed. Assistant active: {assitantActive}, intent: {intent}.")
                 handler_output = None
             
-            ans = Context.plugin_manager.intent_registry[intent].plugin.getRandomAnswer(intent)
-            if re.match(r"{slot}", ans) and Context.plugin_manager.intent_registry.get(intent).plugin.plugin_data.get("intents", "").get(intent, "").get("hasSlotOutput", False):
+            ans = plugin_manager.intent_registry[intent].plugin.getRandomAnswer(intent)
+            if re.match(r"{slot}", ans) and plugin_manager.intent_registry.get(intent).plugin.plugin_data.get("intents", "").get(intent, "").get("hasSlotOutput", False):
                 ans = ans.format(**handler_output) if handler_output else ans
             logger.trace(f"💬 RESPONSE: {ans}")
             path = f"PluginSystem/Cache/{voice_hash}/{hashlib.sha256(ans.encode('utf-8')).hexdigest()}.mp3"
             if os.path.exists(path):
-                Context.AudioQueue.put(path)
+                contextManager.context.AudioQueue.put(path)
             else:
-                if Context.TTS.get("Enabled"):
-                    Context.TTSQueue.put(ans)
+                if contextManager.config.TTS.enabled:
+                    contextManager.context.TTSQueue.put(ans)
                 else:
                     logger.warning("TTS is disabled. Cannot generate audio response.")
-        except exception:
+        except Exception:
             logger.exception("Confidence Crushed")
                 
 # ======================
@@ -108,12 +112,18 @@ def audioThread(Context: ContextManager):
 # ======================
 # TTS Thread
 # ======================
-def TTSThread(Context: ContextManager):
-    tts = TTS(model_name=Context.TTS.get("Model"), progress_bar=True, gpu=False)
-    voice = Context.TTS.get("Voice", None)
-    tts_queue = Context.TTSQueue
-    stopEvent = Context.stopEvent
-    logger = Context.Libs.get("logger")
+def TTSThread(contextManager: ContextManager):
+    logger = contextManager.context.libraries.logger
+    logger.trace("TTSThread started.")
+    if contextManager.context.tts_model is None:
+        logger.info("No TTS model found in context. Initializing TTS model...")
+        tts = TTS(model_name=contextManager.config.TTS.Model, progress_bar=True, gpu=False)
+    else:
+        logger.info("TTS model found in context. Using existing TTS model.")
+        tts = contextManager.context.tts_model
+    voice = contextManager.config.TTS.Voice
+    tts_queue = contextManager.context.TTSQueue
+    stopEvent = contextManager.context.stopEvent
     voice_hash = hashlib.sha256(voice.encode('utf-8')).hexdigest()
     if not voice:
         logger.critical("[TTS ERROR] No voice specified in context.")
@@ -159,13 +169,60 @@ def TTSThread(Context: ContextManager):
 
         ttsSynthesize(text=text, output_path=audio_path)
         logger.trace(f"🗣 TTS audio generated: {audio_path}")
-        Context.AudioQueue.put(audio_path)
+        contextManager.context.AudioQueue.put(audio_path)
+
+def callback(indata, frames, time, status, contextManager: ContextManager):
+    if status:
+        contextManager.context.libraries.logger.warning(f"[STT WARNING] {status}")
+
+    audio = indata[:, 0]
+    resampled = resample_poly(audio, 16000, INPUT_SR).astype(np.int16)
+
+    contextManager.context.STTQueue.put(resampled.tobytes())
+
+def STTThread(contextManager: ContextManager):
+    stt_model = Model(contextManager.config.STT.Model)
+    STTqueue = contextManager.context.STTQueue
+    stopEvent = contextManager.context.stopEvent
+    logger = contextManager.context.libraries.logger
+    logger.trace("STTThread started.")
+    rec = KaldiRecognizer(stt_model, 16000, contextManager.context.plugin_manager.getGrammarForSTT())
+    with sd.InputStream(
+    device=contextManager.config.STT.InputDevice,
+    samplerate=INPUT_SR,
+    channels=1,
+    dtype="int16",
+    callback=partial(callback, contextManager=contextManager),
+    blocksize=2048
+    ):
+        contextManager.context.libraries.logger.info("🎤 Говори...")
+
+        while not stopEvent.is_set():
+            data = STTqueue.get()
+            
+            if rec.AcceptWaveform(data):
+                result = json.loads(rec.Result())
+                text = result.get("text", "").strip()
+                if not text:
+                    continue
+                contextManager.context.libraries.logger.trace(f"🗣 TEXT: {text}")
+                contextManager.context.ConfidenceQueue.put(text)
+            else:
+                pass
     
-def hypervisorThread(Context: ContextManager):
-    ConfidenceThread = threading.Thread(target=confidenceThread, args=(Context,), daemon=True)
-    ConfidenceThread.start()
-    AudioThread = threading.Thread(target=audioThread, args=(Context,), daemon=True)
-    AudioThread.start()
-    if Context.TTS.get("Enabled"):
-        TTSthread = threading.Thread(target=TTSThread, args=(Context,), daemon=True)
+def hypervisorThread(contextManager: ContextManager):
+    if contextManager.config.IntentModel.enabled:
+        ConfidenceThread = threading.Thread(target=confidenceThread, args=(contextManager,), daemon=True)
+        ConfidenceThread.start()
+    if contextManager.config.Audio.enabled:
+        AudioThread = threading.Thread(target=audioThread, args=(contextManager,), daemon=True)
+        AudioThread.start()
+    if contextManager.config.STT.enabled:
+        sttThread = threading.Thread(target=STTThread, args=(contextManager,), daemon=True)
+        sttThread.start()
+    if contextManager.config.TTS.enabled:
+        TTSthread = threading.Thread(target=TTSThread, args=(contextManager,), daemon=True)
         TTSthread.start()
+    if contextManager.config.Telegram.enabled:
+        telegramThread = threading.Thread(target=TelegramThread, args=(contextManager,), daemon=True)
+        telegramThread.start()

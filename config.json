@@ -6,20 +6,27 @@
         "enabled": false
     },
     "STT": {
-        "Model": "models/vosk-model-ru-0.42"
+        "InputDevice": "6",
+        "Model": "models/vosk-model-ru-0.42",
+        "enabled": false
     },
     "IntentModel": {
-        "Path": "models/model.pkl"
+        "Path": "models/model.pkl",
+        "enabled": false
     },
     "Audio": {
-        "InputDevice": "Microphone (Realtek(R) Audio)",
-        "OutputDevice": "Speakers (Realtek(R) Audio)"
+        "OutputDevice": "Speakers (Realtek(R) Audio)",
+        "enabled": false
     },
     "Logging": {
         "FileLogLevel": "TRACE",
-        "FileLogPath": "logs/app.log",
+        "FileLogPath": "app.log",
         "ConsoleLogLevel": "INFO",
         "ConsoleDebugLogLevel": "TRACE"
+    },
+    "Telegram": {
+        "enabled": false,
+        "TrustedUsersID": []
     },
     "User": {
         "Name": "User"

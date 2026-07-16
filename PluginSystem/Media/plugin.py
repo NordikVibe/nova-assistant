@@ -1,8 +1,9 @@
 from PluginSystem.PluginSystem import BasePlugin
+from Managers import ContextManager, LoadedPlugin
 
 class Plugin(BasePlugin):
-    def __init__(self, Context, plugin):
-        super().__init__(Context, plugin)
+    def __init__(self, contextManager: ContextManager, plugin: LoadedPlugin):
+        super().__init__(contextManager, plugin)
 
     def on_load(self):
         super().on_load()
@@ -15,27 +16,27 @@ class Plugin(BasePlugin):
     
     def pause(self, slots):
         """Pause the currently playing media."""
-        self.Context.Libs.logger.trace("Pausing media playback.")
-        self.Context.Libs.subprocess.run(["playerctl", "pause"])
+        self.contextManager.context.libraries.logger.trace("Pausing media playback.")
+        self.contextManager.context.libraries.subprocess.run(["playerctl", "pause"])
         
         pass
     def resume(self, slots):
         """Resume the currently playing media."""
-        self.Context.Libs.logger.trace("Resuming media playback.")
-        self.Context.Libs.subprocess.run(["playerctl", "play"])
+        self.contextManager.context.libraries.logger.trace("Resuming media playback.")
+        self.contextManager.context.libraries.subprocess.run(["playerctl", "play"])
         pass
     def stop(self, slots):
         """Stop the currently playing media."""
-        self.Context.Libs.logger.trace("Stopping media playback.")
-        self.Context.Libs.subprocess.run(["playerctl", "stop"])
+        self.contextManager.context.libraries.logger.trace("Stopping media playback.")
+        self.contextManager.context.libraries.subprocess.run(["playerctl", "stop"])
         pass
     def next(self, slots):
         """Skip to the next media track."""
-        self.Context.Libs.logger.trace("Skipping to the next media track.")
-        self.Context.Libs.subprocess.run(["playerctl", "next"])
+        self.contextManager.context.libraries.logger.trace("Skipping to the next media track.")
+        self.contextManager.context.libraries.subprocess.run(["playerctl", "next"])
         pass
     def previous(self, slots):
         """Go back to the previous media track."""
-        self.Context.Libs.logger.trace("Going back to the previous media track.")
-        self.Context.Libs.subprocess.run(["playerctl", "previous"])
+        self.contextManager.context.libraries.logger.trace("Going back to the previous media track.")
+        self.contextManager.context.platform_manager.media.previous_track()
         pass

@@ -1,28 +1,21 @@
-from scipy.signal import resample_poly
-from vosk import Model, KaldiRecognizer
-
-from Managers import ContextManager, AssistantManager
-
-import sounddevice as sd
-import numpy as np
+from Managers import ContextManager, TrainingManager
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.linear_model import LogisticRegression
+from sklearn.pipeline import make_pipeline
+from TTS.api import TTS
 
 import json
-import queue
 import argparse
-# import signal
 import threading
 import hashlib
-import os
+import builtins
+import soundfile as sf
+import numpy as np
+import librosa
+import gc
 
 import threads
-
-# ======================
-# AUDIO SETTINGS
-# ======================
-DEVICE = 6
-IN_RATE = 44100
-OUT_RATE = 16000
-
+from pathlib import Path
 # ======================
 # ARGUMENTS
 # ======================
@@ -31,6 +24,7 @@ parser = argparse.ArgumentParser(description="Voice Assistant")
 parser.add_argument("--about", help="Show information about the program", action="store_true")
 parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("-c", "--config", type=str, default="config.json", help="Path to the config file")
+parser.add_argument("--preprocess", action="store_true", help="Force preprocessing of the model and TTS generation")
 
 args = parser.parse_args()
 
@@ -41,46 +35,131 @@ args = parser.parse_args()
 context_manager = ContextManager(config_file=args.config, args=args)
 
 
-# =====================
-# PLUGINS
-# =====================
-
-plugin_manager = AssistantManager(Context=context_manager)
-context_manager.plugin_manager = plugin_manager
-
 # ======================
 # HASH CHECK
 # ======================
-if not os.path.exists("hashsum.json"):
-    context_manager.Libs.logger.error("⚠️ Hash sum file not found! Please run 'python preprocessing.py' to generate it.")
-    exit(1)
-hash_sums = json.load(open("hashsum.json", "r", encoding="utf-8"))
-for pluginF in os.listdir("PluginSystem"):
-    if not os.path.isdir(f"PluginSystem/{pluginF}") or pluginF.startswith("!") or pluginF.startswith("__") or pluginF == "Cache":
-        continue
-    for file in os.listdir(f"PluginSystem/{pluginF}"):
-        if file.endswith(".yaml"):
-            hash_value = hashlib.sha256(open(f"PluginSystem/{pluginF}/{file}", "rb").read()).hexdigest()
-            context_manager.Libs.logger.info(f"Hash for {pluginF}/{file}: {hash_value}")
-            try:
-                hash_check_fail = hash_value != hash_sums.get(f"{pluginF}/{file}")
-            except KeyError:
-                hash_check_fail = True
-                context_manager.Libs.logger.warning(f"⚠️ Hash not found for {pluginF}/{file}!")
-                exit(1)
-            if hash_check_fail:
-                if args.debug:
-                    context_manager.Libs.logger.info(f"⚠️ Hash mismatch for {pluginF}/{file}! Expected: {hash_sums.get(f'{pluginF}/{file}')}, Got: {hash_value}")
-                context_manager.Libs.logger.info("Please rebuild sklearn model with 'python preprocessing.py' for update hashes")
-                exit(1)
+if not Path("hashsum.json").exists():
+    context_manager.context.libraries.logger.warning("⚠️ Hash sum file not found! Need to relearn sklearn model. Please wait for preprocessing to finish.")
+    need_preprocessing = True
+else:
+    check_hash_sum_file = open("hashsum.json", "r", encoding="utf-8")
+    check_hash_sum = json.load(check_hash_sum_file)
+    check_hash_sum_file.close()
+    for pluginF in Path("PluginSystem").iterdir():
+        if not pluginF.is_dir() or pluginF.name.startswith("!") or pluginF.name.startswith("__") or pluginF.name == "Cache":
+            continue
+        if need_preprocessing:
+            break
+        for file in pluginF.iterdir():
+            if file.suffix == ".yaml":
+                hash = hashlib.sha256(file.read_bytes()).hexdigest()
+                context_manager.context.libraries.logger.trace(f"Hash for {pluginF.name}/{file.name}: {hash}")
+                if hash != check_hash_sum.get(f"{pluginF.name}/{file.name}"):
+                    context_manager.context.libraries.logger.warning(f"⚠️ Hash mismatch for {pluginF.name}/{file.name}! Expected: {check_hash_sum.get(f'{pluginF.name}/{file.name}')}, Got: {hash}")
+                    context_manager.context.libraries.logger.info("Need to start preprocessing to update hashes. Please wait for preprocessing to finish.")
+                    need_preprocessing = True
+                    break
+                else:
+                    continue
 
-# ======================
-# MODELS
-# ======================
+if need_preprocessing or args.preprocess:
+    model = make_pipeline(
+        TfidfVectorizer(ngram_range=(1, 2), max_features=1000),
+        LogisticRegression(max_iter=1000)
+    )
+    manager = TrainingManager(Context=context_manager, model=model)
+    manager.train_model()
+    manager.dump_model()
+    
+    if Path(context_manager.config.TTS.Voice).is_file():
+        def ttsSynthesize(text, output_path, tts):
+            tts.tts_to_file(text=text, file_path=output_path, language="ru", speaker_wav=context_manager.config.TTS.Voice, emotion=context_manager.config.TTS.Emotion)
+            data, sr = sf.read(output_path)
+            data = data.astype(np.float32)
+            if data.ndim > 1:
+                data = np.mean(data, axis=1)
+            if sr != 48000:
+                data = librosa.resample(
+                    data,
+                    orig_sr=sr,
+                    target_sr=48000
+                )
+            data = np.nan_to_num(data)
+            sf.write(output_path, data, 48000)
+    else:
+        def ttsSynthesize(text, output_path):
+            tts.tts_to_file(text=text, file_path=output_path, language="ru", speaker=context_manager.config.TTS.Voice, emotion=context_manager.config.TTS.Emotion)
+            data, sr = sf.read(output_path)
+            data = data.astype(np.float32)
+            if data.ndim > 1:
+                data = np.mean(data, axis=1)
+            if sr != 48000:
+                data = librosa.resample(
+                    data,
+                    orig_sr=sr,
+                    target_sr=48000
+                )
+            data = np.nan_to_num(data)
+            sf.write(output_path, data, 48000)
+    
+    hash_sum_file = open("hashsum.json", "w", encoding="utf-8")
+    hash_sums = {}
+    for pluginF in Path("PluginSystem").iterdir():
+        if pluginF.is_file() or pluginF.name.startswith("!") or pluginF.name.startswith("__") or pluginF.name == "Cache":
+            continue
+        for file in pluginF.iterdir():
+            if file.suffix == ".yaml":
+                hash_value = hashlib.sha256(file.read_bytes()).hexdigest()
+                context_manager.context.libraries.logger.info(f"Hash for {pluginF}/{file}: {hash_value}")
+                hash_sums[f"{pluginF}/{file}"] = hash_value
+    json.dump(hash_sums, hash_sum_file, ensure_ascii=False, indent=4)
+    hash_sum_file.close()
 
-stt_model = Model(context_manager.STT.get("Model"))
-STTqueue = queue.Queue()
-rec = KaldiRecognizer(stt_model, 16000, plugin_manager.getGrammarForSTT())
+    context_manager.context.libraries.logger.success("Training completed and model saved to 'models/model.pkl'.")
+    context_manager.context.libraries.logger.info("Checking for audio files to generate...")
+    
+    data = manager.getDataForTTS()
+    data_to_tts = []
+    
+    voice_hash = hashlib.sha256(context_manager.config.TTS.Voice.encode('utf-8')).hexdigest()
+    
+    if not Path(f"PluginSystem/Cache/{voice_hash}").exists():
+        Path(f"PluginSystem/Cache/{voice_hash}").mkdir(parents=True, exist_ok=True)
+        context_manager.context.libraries.logger.info(f"Created cache directory for voice: PluginSystem/Cache/{voice_hash}")
+    
+    default_print = builtins.print
+    builtins.print = lambda *args, **kwargs: default_print(*args, **kwargs) if not args[0].startswith("Generating TTS for") else None
+    
+    for unit in data:
+        text = unit["text"]
+        intent = unit["intent"]
+        output_path = f"PluginSystem/Cache/{voice_hash}/{hashlib.sha256(text.encode('utf-8')).hexdigest()}.mp3"
+        if not Path(output_path).exists():
+            context_manager.context.libraries.logger.info(f"Generating TTS for intent '{intent}': {text}")
+            ttsSynthesize(text=text, output_path=output_path)
+            context_manager.context.libraries.logger.info(f"TTS generated and saved to: {output_path}")
+        else:
+            context_manager.context.libraries.logger.info(f"TTS already exists for intent '{intent}': {text}, skipping generation.")
+    
+    if not data_to_tts:
+        context_manager.context.libraries.logger.info("All TTS audio files are already generated.")
+    else:
+        context_manager.context.libraries.logger.info(f"Ready to generate {len(data_to_tts)} new TTS audio files.")
+        
+        tts = TTS(model_name=context_manager.config.TTS.Model, progress_bar=True, gpu=False)
+
+        for text, path in data_to_tts:
+            ttsSynthesize(text=text, output_path=path, tts=tts)
+            context_manager.context.libraries.logger.info(f"{text} generated and saved to: {path}")
+
+        if context_manager.config.TTS.enabled:
+            context_manager.context.TTSMODEL = tts
+            context_manager.context.libraries.logger.info("TTS model initialized and set in context.")
+        else:
+            context_manager.context.libraries.logger.info("TTS is disabled in the config. TTS model will not be set in context. Deleting TTS model to free up memory...")
+            del tts
+            gc.collect()
+
 
 # ======================
 # THREAD HYPERVISOR
@@ -88,60 +167,3 @@ rec = KaldiRecognizer(stt_model, 16000, plugin_manager.getGrammarForSTT())
 
 HyperVisorThread = threading.Thread(target=threads.hypervisorThread, args=(context_manager,), daemon=True)
 HyperVisorThread.start()
-
-
-# ======================
-# CALLBACK
-# ======================
-def callback(indata, frames, time, status):
-    if status:
-        context_manager.Libs.logger.info(status)
-
-    audio = indata[:, 0]
-    resampled = resample_poly(audio, OUT_RATE, IN_RATE).astype(np.int16)
-
-    STTqueue.put(resampled.tobytes())
-
-# def kill_signal_handler(sig, frame):
-#     context_manager.Libs.logger.info(f"Received termination signal {sig}. Stopping threads...")
-#     context_manager.Libs.logger.info("🛑 Terminating...")
-#     context_manager.stopEvent.set()
-#     ConfidenceThread.join()
-#     AudioThread.join()
-#     if context_manager.TTS.get("Enabled"):
-#         TTSThread.join()
-#     context_manager.Libs.logger.info("Successfully terminated.")
-#     exit(0)
-
-# signal.signal(signal.SIGINT, kill_signal_handler)
-# signal.signal(signal.SIGTERM, kill_signal_handler)
-
-
-# ======================
-# MAIN LOOP
-# ======================
-with sd.InputStream(
-    device=DEVICE,
-    samplerate=IN_RATE,
-    channels=1,
-    dtype="int16",
-    callback=callback,
-    blocksize=2048,
-):
-    context_manager.Libs.logger.info("🎤 Говори...")
-
-    while True:
-        data = STTqueue.get()
-        # -------------------
-        # STT (Vosk)
-        # -------------------
-        if rec.AcceptWaveform(data):
-            result = json.loads(rec.Result())
-            text = result.get("text", "").strip()
-            if not text:
-                continue
-            context_manager.Libs.logger.trace(f"🗣 TEXT: {text}")
-            context_manager.ConfidenceQueue.put(text)
-        else:
-            pass
-        

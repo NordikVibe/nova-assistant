@@ -1,8 +1,9 @@
 from PluginSystem.PluginSystem import BasePlugin
+from Managers import ContextManager, LoadedPlugin
 
 class Plugin(BasePlugin):
-    def __init__(self, Context, plugin):
-        super().__init__(Context, plugin)
+    def __init__(self, contextManager: ContextManager, plugin: LoadedPlugin):
+        super().__init__(contextManager, plugin)
 
     def on_load(self):
         super().on_load()
@@ -14,6 +15,6 @@ class Plugin(BasePlugin):
         super().on_call(*args, **kwargs)
 
     def open_telegram_handler(self, slots):
-        self.Context.Libs.logger.trace("Opening Telegram...")
-        self.Context.Libs.subprocess.run(["AyuGram"])
+        self.contextManager.context.libraries.logger.trace("Opening Telegram...")
+        self.contextManager.context.libraries.subprocess.run(["AyuGram"])
         return {}

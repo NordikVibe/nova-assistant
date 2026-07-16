@@ -1,8 +1,9 @@
 from PluginSystem.PluginSystem import BasePlugin
+from Managers import ContextManager, LoadedPlugin
 
 class Plugin(BasePlugin):
-    def __init__(self, Context, plugin):
-        super().__init__(Context, plugin)
+    def __init__(self, contextManager: ContextManager, plugin: LoadedPlugin):
+        super().__init__(contextManager, plugin)
 
     def on_load(self):
         super().on_load()
@@ -14,4 +15,4 @@ class Plugin(BasePlugin):
         super().on_call(*args, **kwargs)
 
     def activate_handler(self, slots):
-        return {"value": self.Context.User["Name"]}
+        return {"value": self.contextManager.context.User["Name"]}
