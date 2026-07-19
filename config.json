@@ -1,22 +1,22 @@
 {
     "TTS": {
-        "Voice": "audio_2026-06-29_23-04-48.ogg",
-        "Emotion": "neutral",
-        "Model": "tts_models/multilingual/multi-dataset/xtts_v2",
+        "voice": "audio_2026-06-29_23-04-48.ogg",
+        "emotion": "neutral",
+        "model_path": "tts_models/multilingual/multi-dataset/xtts_v2",
         "enabled": false
     },
     "STT": {
-        "InputDevice": "6",
-        "Model": "models/vosk-model-ru-0.42",
-        "enabled": false
+        "input_device": 6,
+        "model_path": "models/vosk-model-small-ru-0.22",
+        "enabled": true
     },
     "IntentModel": {
-        "Path": "models/model.pkl",
-        "enabled": false
+        "model_path": "models/model.pkl",
+        "enabled": true
     },
     "Audio": {
-        "OutputDevice": "Speakers (Realtek(R) Audio)",
-        "enabled": false
+        "output_device": 6,
+        "enabled": true
     },
     "Logging": {
         "FileLogLevel": "TRACE",
@@ -26,9 +26,9 @@
     },
     "Telegram": {
         "enabled": false,
-        "TrustedUsersID": []
+        "trustedUsersID": []
     },
     "User": {
-        "Name": "User"
+        "name": "User"
     }
 }

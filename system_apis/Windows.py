@@ -1,9 +1,8 @@
-from system_apis.PlatformManagers import BaseMediaManager, BaseBackend
+from system_apis.BasePlatformManagers import BaseMediaManager, BaseBackend
 import pycaw.pycaw as pycaw
 from ctypes import POINTER, cast
 from comtypes import CLSCTX_ALL
 
-REQUIRED_NT_VERSION = "10"
 
 
 class WindowsMediaManager(BaseMediaManager):

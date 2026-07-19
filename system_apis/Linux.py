@@ -1,7 +1,7 @@
-from system_apis.PlatformManagers import BaseMediaManager, BaseBackend
+from system_apis.BasePlatformManagers import BaseMediaManager, BaseBackend
 import subprocess
 
-REQUIRED_KERNEL_VERSION = "6.19.0"
+
 
 
 class LinuxMediaManager(BaseMediaManager):

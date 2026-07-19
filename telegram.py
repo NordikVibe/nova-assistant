@@ -1,5 +1,6 @@
-from aiogram import BaseMiddleware, Bot, Dispatcher
+from aiogram import BaseMiddleware, Bot, Dispatcher, F
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command
 from Managers import ContextManager
 import soundfile as sf
 import numpy as np
@@ -54,17 +55,18 @@ def permission_required(permission: bool):
 
 
 dotenv.load_dotenv()
+TOKEN = dotenv.get_key(dotenv.find_dotenv(), "TELEGRAM_API_TOKEN")  # Load the Telegram API token from the .env file
 
-bot = Bot(token=dotenv.getenv("TELEGRAM_API_TOKEN"))
+bot = Bot(token=TOKEN)
 
-dp = Dispatcher(bot)
+dp = Dispatcher()
 
 dp.message.middleware(PermissionMiddleware())
 
 @permission_required(False)
-@dp.message_handler(commands=["start"])
+@dp.message(Command("start"))
 async def start(message, contextManager: ContextManager):
-    allowed_users = contextManager.config.Telegram.allowed_users
+    allowed_users = contextManager.config.Telegram.trustedUsersID
     if str(message.from_user.id) not in allowed_users:
         usersToAllow[message.from_user.id] = []
         await message.answer(f"You are not authorized to use this bot. Please type (ALLOW {message.from_user.id}) in terminal or allowed chat to request access.")
@@ -76,9 +78,9 @@ async def start(message, contextManager: ContextManager):
         await message.answer("Welcome! Type your command or click the button to interact with assistant on your device.", reply_markup=ReplyKeyboard(["Previous track", "Pause", "Resume", "Next track"]).get_keyboard())
 
 @permission_required(True)
-@dp.callback_query_handler(lambda c: c.data.startswith("ALLOW") or c.data.startswith("DENY"))
+@dp.callback_query(lambda c: c.data.startswith("ALLOW") or c.data.startswith("DENY"))
 async def process_callback(callback_query, contextManager: ContextManager):
-    allowed_users = contextManager.config.Telegram.allowed_users
+    allowed_users = contextManager.config.Telegram.trustedUsersID
     action, user_id = callback_query.data.split()
 
     if action == "ALLOW" and str(user_id) not in allowed_users and callback_query.from_user.id in allowed_users:
@@ -95,10 +97,10 @@ async def process_callback(callback_query, contextManager: ContextManager):
             await bot.edit_message_reply_markup(chat_id=chat_id, message_id=message_id, reply_markup=None)
         await bot.send_message(chat_id=user_id, text="Your access request has been denied. You cannot use the bot.")
 
-@dp.message_handler(types=["text"])
+@dp.message(F.text)
 @permission_required(True)
 async def handle_message(message, contextManager: ContextManager):
-    allowed_users = contextManager.config.Telegram.allowed_users
+    allowed_users = contextManager.config.Telegram.trustedUsersID
     if str(message.from_user.id) not in allowed_users:
         await message.answer("You are not authorized to use this bot. Please type (ALLOW {message.from_user.id}) in terminal or allowed chat to request access.")
         for user_id in allowed_users:
@@ -111,9 +113,9 @@ async def handle_message(message, contextManager: ContextManager):
     contextManager.context.ConfidenceQueue.put(text)
 
 @permission_required(True)
-@dp.message_handler(types=["voice"])
+@dp.message_handler(F.voice)
 async def handle_voice(message, contextManager: ContextManager):
-    allowed_users = contextManager.config.Telegram.allowed_users
+    allowed_users = contextManager.config.Telegram.trustedUsersID
     if str(message.from_user.id) not in allowed_users:
         await message.answer("You are not authorized to use this bot. Please type (ALLOW {message.from_user.id}) in terminal or allowed chat to request access.")
         for user_id in allowed_users:

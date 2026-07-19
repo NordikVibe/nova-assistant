@@ -10,7 +10,10 @@ import threading
 import hashlib
 import builtins
 import soundfile as sf
+import sounddevice as sd
 import numpy as np
+import questionary
+
 import librosa
 import gc
 
@@ -25,6 +28,7 @@ parser.add_argument("--about", help="Show information about the program", action
 parser.add_argument("-d", "--debug", action="store_true", help="Enable debug mode")
 parser.add_argument("-c", "--config", type=str, default="config.json", help="Path to the config file")
 parser.add_argument("--preprocess", action="store_true", help="Force preprocessing of the model and TTS generation")
+parser.add_argument("-s", "--settings", action="store_true", help="Open settings menu")
 
 args = parser.parse_args()
 
@@ -32,8 +36,48 @@ args = parser.parse_args()
 # CONTEXT
 # =====================
 
-context_manager = ContextManager(config_file=args.config, args=args)
+context_manager = ContextManager(args=args, config_file=args.config or "config.json")
 
+# =====================
+# VARS
+# =====================
+need_preprocessing = False
+
+# =====================
+# SETTINGS MENU
+# =====================
+
+if args.settings:
+    context_manager.context.libraries.logger.info("Opening settings menu...")
+    devices = []
+    
+    for i, dev in enumerate(sd.query_devices()):
+        devices.append(f"{i}: {dev['name']}")
+        
+    choiceMic = questionary.select(
+        "Select the microphone device:",
+        choices=devices
+    ).ask()
+    
+    choiceMicIndex = int(choiceMic.split(":")[0])
+    
+    choiceSpeaker = questionary.select(
+        "Select the speaker device:",
+        choices=devices
+    ).ask()
+    
+    choiceSpeakerIndex = int(choiceSpeaker.split(":")[0])
+    
+    context_manager.write_config({
+        "Audio": {
+            "OutputDevice": choiceSpeakerIndex,
+        },
+        "STT": {
+            "InputDevice": choiceMicIndex,
+        }
+    })
+    context_manager.context.libraries.logger.info("Settings saved. Exiting...")
+    exit(0)
 
 # ======================
 # HASH CHECK
@@ -61,6 +105,10 @@ else:
                     break
                 else:
                     continue
+
+# ======================
+# PREPROCESSING
+# ======================
 
 if need_preprocessing or args.preprocess:
     model = make_pipeline(
@@ -167,3 +215,8 @@ if need_preprocessing or args.preprocess:
 
 HyperVisorThread = threading.Thread(target=threads.hypervisorThread, args=(context_manager,), daemon=True)
 HyperVisorThread.start()
+
+while not context_manager.context.stopEvent.is_set():
+    if not HyperVisorThread.is_alive():
+        context_manager.context.libraries.logger.critical("HyperVisorThread has stopped unexpectedly. Exiting...")
+        exit(1)

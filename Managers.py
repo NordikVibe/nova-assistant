@@ -1,4 +1,3 @@
-from doctest import debug
 import json
 import os
 import platform
@@ -8,6 +7,7 @@ import threading
 from dataclasses import dataclass
 import joblib
 import yaml
+import sounddevice as sd
 from sklearn.pipeline import Pipeline
 import importlib.util
 import random
@@ -15,13 +15,13 @@ from typing import Callable, TypedDict
 from loguru import logger
 import sys
 import subprocess
-from system_apis.PlatformManagers import PlatformManager
+from system_apis.PlatformManager import PlatformManager
 from pydantic import BaseModel, field_validator
 from pathlib import Path
 from typing import Literal
 from TTS.api import TTS
 
-PLUGIN_SYSTEM_PATH = os.path.join(os.getcwd(), "PluginSystem")
+PLUGIN_SYSTEM_PATH = Path("PluginSystem")
 
 DEFAULT_CONFIG = {
     "TTS": {
@@ -62,14 +62,11 @@ class IntentData(TypedDict):
     answersWithSlot: list[str]
     hasSlot: bool
 
-class DotDict(dict):
-    def __getattr__(self, name):
-        return self[name]
-    
 class IntentConfig(BaseModel):
-    modelPath: str
+    model_path: str
     enabled: bool
-    @field_validator("modelPath")
+
+    @field_validator("model_path")
     @classmethod
     def validate_path(cls, v):
         if Path(v).exists():
@@ -80,57 +77,84 @@ class IntentConfig(BaseModel):
 class TTSConfig(BaseModel):
     voice: str
     emotion: str
-    modelPath: str
+    model_path: str
     enabled: bool
-    @field_validator("modelPath")
+
+    @field_validator("model_path")
     @classmethod
     def validate_model(cls, v):
         if v.startswith("tts_models/"):
             return v
         else:
             raise ValueError(f"TTS model '{v}' is not a valid TTS model identifier.")
+
     @field_validator("voice")
     @classmethod
     def validate_voice(cls, v):
         if v:
-            if Path(v).exists() and Path(v).is_file() and v.endswith(".wav"):
+            path = Path(v)
+            if path.exists() and path.is_file() and path.suffix in [".wav", ".mp3", ".ogg"]:
                 return v
-            elif v in ["Luis Moray", "Alloy", "Antoni", "Bella", "Elli", "Jenny", "Josh", "Luna", "Rachel", "Sam", "Tessa"]:
+            elif v in [
+                "Luis Moray",
+                "Alloy",
+                "Antoni",
+                "Bella",
+                "Elli",
+                "Jenny",
+                "Josh",
+                "Luna",
+                "Rachel",
+                "Sam",
+                "Tessa",
+            ]:
                 return v
             else:
-                raise ValueError(f"TTS voice '{v}' is not a valid voice. Must be a path to a .wav file or one of the predefined voices.")
+                raise ValueError(
+                    f"TTS voice '{v}' is not a valid voice. Must be a path to a .wav file or one of the predefined voices."
+                )
         else:
             raise ValueError("TTS voice cannot be empty.")
+
     @field_validator("emotion")
     @classmethod
     def validate_emotion(cls, v):
         if v in ["neutral", "happy", "sad", "angry"]:
             return v
         else:
-            raise ValueError(f"TTS emotion '{v}' is not a valid emotion. Must be one of: 'neutral', 'happy', 'sad', 'angry'.")
+            raise ValueError(
+                f"TTS emotion '{v}' is not a valid emotion. Must be one of: 'neutral', 'happy', 'sad', 'angry'."
+            )
 
 class STTConfig(BaseModel):
-    input_device: str
-    modelPath: str
+    input_device: int
+    model_path: str
     enabled: bool
-    @field_validator("modelPath")
+
+    @field_validator("model_path")
     @classmethod
     def validate_model(cls, v):
-        if Path(v).exists() and Path(v).is_dir():
+        path = Path(v)
+        if path.exists() and path.is_dir():
             return v
         else:
-            raise ValueError(f"STT model path '{v}' does not exist or is not a directory.")
+            raise ValueError(
+                f"STT model path '{v}' does not exist or is not a directory."
+            )
 
 class AudioConfig(BaseModel):
-    output_device: str
+    output_device: int
     enabled: bool
 
 class LoggingConfig(BaseModel):
-    file_log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    file_log_path: str
-    console_log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    console_debug_log_level: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-    @field_validator("file_log_path")
+    FileLogLevel: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    FileLogPath: str
+    ConsoleLogLevel: Literal["TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+    ConsoleDebugLogLevel: Literal[
+        "TRACE", "DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"
+    ]
+
+    @field_validator("FileLogPath")
     @classmethod
     def validate_file_log_path(cls, v):
         if Path(v).parent.exists():
@@ -142,7 +166,7 @@ class UserConfig(BaseModel):
     name: str
 
 class TelegramConfig(BaseModel):
-    allowed_users: list[str]
+    trustedUsersID: list[int]
     enabled: bool
 
 @dataclass
@@ -152,10 +176,10 @@ class Context:
     AudioQueue: queue.Queue
     TTSQueue: queue.Queue
     STTQueue: queue.Queue
-    libraries: "Libraries"
-    plugin_manager: "AssistantManager"
     args: dict
-    platform_manager: "PlatformManager"
+    libraries: "Libraries"
+    plugin_manager: "AssistantManager" = None
+    platform: "PlatformManager" = None
     tts_model: TTS | None = None
 
 @dataclass
@@ -170,8 +194,7 @@ class Libraries:
     subprocess: any
     platform: any
 
-@dataclass
-class Config:
+class Config(BaseModel):
     TTS: TTSConfig
     STT: STTConfig
     IntentModel: IntentConfig
@@ -180,12 +203,11 @@ class Config:
     User: UserConfig
     Telegram: TelegramConfig
 
-
 class LoadedPlugin:
     intent_registry: dict[str, "IntentEntry"] = {}
 
     def __init__(
-        self, plugin_meta_path: str, plugin_src_path: str, Context: "ContextManager"
+        self, plugin_meta_path: str, plugin_src_path: str, contextManager: "ContextManager"
     ):
         with open(plugin_meta_path, "r", encoding="utf-8") as f:
             plugin_yaml = yaml.safe_load(f)
@@ -199,14 +221,14 @@ class LoadedPlugin:
         self.plugin_data = (
             plugin_yaml["plugin-data"] if "plugin-data" in plugin_yaml else {}
         )
-        self.Context = Context
+        self.contextManager = contextManager
 
         spec = importlib.util.spec_from_file_location(self.name, self.plugin_class)
 
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
 
-        self.instance = module.Plugin(Context, self)
+        self.instance = module.Plugin(contextManager, self)
         self.instance.on_load()
         self.module = module
 
@@ -227,7 +249,7 @@ class LoadedPlugin:
             return None
         random_index1 = (
             random.randint(0, 1)
-            if intent_data.get("hasSlotOutput", False) and self.Context.TTS["enabled"]
+            if intent_data.get("hasSlotOutput", False) and self.contextManager.config.TTS.enabled
             else 0
         )
         while not answers[random_index1]:
@@ -249,29 +271,33 @@ class IntentEntry:
 
 
 class ContextManager:
-    def __init__(self, config_file: str = "config.json", args: dict = {debug: False}):
+    def __init__(self, args, config_file: str = "config.json"):
+
         self._load_cfg(config_file)
         self.config_file = config_file
-        
+
         logger.remove()
         logger.add(
-            self.config.Logging.file_log_path,
-            level=self.config.Logging.file_log_level,
+            self.config.Logging.FileLogPath,
+            level=self.config.Logging.FileLogLevel,
             rotation="10 MB",
             retention="7 days",
             compression="zip",
         )
         logger.add(
             sys.stdout,
-            level=self.config.Logging.ConsoleDebugLogLevel if args.debug else self.config.Logging.ConsoleLogLevel,
+            level=self.config.Logging.ConsoleLogLevel
+            if args.debug
+            else self.config.Logging.ConsoleLogLevel,
         )
-        
+
         self.context = Context(
             stopEvent=threading.Event(),
             ConfidenceQueue=queue.Queue(),
             AudioQueue=queue.Queue(),
             TTSQueue=queue.Queue(),
             STTQueue=queue.Queue(),
+            args=args,
             libraries=Libraries(
                 re=re,
                 os=os,
@@ -283,30 +309,30 @@ class ContextManager:
                 subprocess=subprocess,
                 platform=platform,
             ),
-            plugin_manager=AssistantManager(Context=self),
-            args=args,
-            platform_manager=PlatformManager(self),
         )
+        self.context.platform = (
+            PlatformManager(contextManager=self) if not args.settings else None
+        )
+        self.context.plugin_manager = (
+            AssistantManager(contextManager=self) if not args.settings else None
+        )
+        sd.default.device = (self.config.STT.input_device, self.config.Audio.output_device)
 
-    def __getattribute__(self, name: str) -> Config | Context:
+    # def __setattr__(self, name: str, value):
+    #     if name in ["context", "config"]:
+    #         object.__setattr__(self, name, value)
+    #     else:
+    #         raise AttributeError(f"Cannot set attribute '{name}' on ContextManager.")
+    def __getattr__(self, name: str):
         if name in ["context", "config"]:
             return object.__getattribute__(self, name)
-        return
-
-    def __setattr__(self, name: str, value):
-        if name in ["context", "config"]:
-            object.__setattr__(self, name, value)
         else:
-            raise AttributeError(f"Cannot set attribute '{name}' on ContextManager.")
+            raise AttributeError(f"Cannot get attribute '{name}' on ContextManager.")
 
     def write_config(self, new_params: dict) -> None:
         def _deep_update(orig: dict, updates: dict):
             for k, v in updates.items():
-                if (
-                    k in orig
-                    and isinstance(orig[k], dict)
-                    and isinstance(v, dict)
-                ):
+                if k in orig and isinstance(orig[k], dict) and isinstance(v, dict):
                     _deep_update(orig[k], v)
                 else:
                     orig[k] = v
@@ -350,25 +376,25 @@ class BasePluginManager:
         self._load_plugins(plugin_folder)
 
     def _load_plugins(self, plugin_folder: str):
-        plugin_folder = os.path.join(os.getcwd(), plugin_folder)
+        plugin_folder = Path(plugin_folder)
 
-        for pluginDir in os.listdir(plugin_folder):
+        for pluginDir in plugin_folder.iterdir():
             plugin_data = None
             plugin_src = None
             if (
-                os.path.isfile(os.path.join(plugin_folder, pluginDir))
-                or pluginDir.startswith("!")
-                or pluginDir.startswith("__")
-                or pluginDir == "Cache"
+                Path(pluginDir).is_file()
+                or pluginDir.name.startswith("!")
+                or pluginDir.name.startswith("__")
+                or pluginDir.name == "Cache"
             ):
                 continue
 
-            for file in os.listdir(os.path.join(plugin_folder, pluginDir)):
-                if file.endswith(".yaml"):
-                    plugin_data = os.path.join(plugin_folder, pluginDir, file)
+            for file in pluginDir.iterdir():
+                if file.suffix == ".yaml":
+                    plugin_data = file
 
-                elif file.endswith(".py"):
-                    plugin_src = os.path.join(plugin_folder, pluginDir, file)
+                elif file.suffix == ".py":
+                    plugin_src = file
 
             if plugin_data is None or plugin_src is None:
                 self.contextManager.context.libraries.logger.warning(
@@ -381,7 +407,7 @@ class BasePluginManager:
                 LoadedPlugin(
                     plugin_meta_path=plugin_data,
                     plugin_src_path=plugin_src,
-                    Context=self.contextManager,
+                    contextManager=self.contextManager,
                 )
             )
             for name, entry in self.plugins[-1].intent_registry.items():
@@ -428,7 +454,9 @@ class TrainingManager(BasePluginManager):
 
 class AssistantManager(BasePluginManager):
     def __init__(
-        self, plugin_folder: str = PLUGIN_SYSTEM_PATH, contextManager: ContextManager = None
+        self,
+        plugin_folder: str = PLUGIN_SYSTEM_PATH,
+        contextManager: ContextManager = None,
     ):
         super().__init__(contextManager, plugin_folder)
 
